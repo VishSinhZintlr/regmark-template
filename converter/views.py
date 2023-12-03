@@ -45,9 +45,14 @@ class UploadDataView(View):
 
             return HttpResponse("File successfully uploaded and processed.")  # Redirect after processing
         return render(request, self.template_name, {'form': form})
+    
+    def is_currency_format(self, number_format):
+        currency_formats = ['$', '€', '£', '¥']  #! Add required currency symbols here
+        return any(symbol in number_format for symbol in currency_formats)
 
 
-    def process_xlsx(self, file, table_id):
+
+    def process_xlsx(self, file, table_id, product_id, data_sheet_id):
         workbook = load_workbook(filename=file, data_only=True)
         sheet = workbook.active
         
@@ -114,9 +119,12 @@ class UploadDataView(View):
                     data_type = DataCell.DATA_TYPE.TIME
                 else:
                     data_type = DataCell.DATA_TYPE.STRING 
+                    
                 
-                
-                
+                # Determine if the cell has a currency format
+                is_currency = self.is_currency_format(cell.number_format)
+
+                # !Doesn't work as required
                 # cell_color = cell.fill.fgColor.rgb if cell.fill.fgColor.type == 'rgb' else 'None'sad
                 cell_color = cell.fill.fgColor
                 
@@ -124,6 +132,9 @@ class UploadDataView(View):
                 
                 # Check if cell is locked
                 is_locked = cell.protection.locked
+                
+                
+                # TODO: Find Foreign Reference IDs
                 
                 # Print cell details
                 print('row_no:', row)
@@ -134,7 +145,25 @@ class UploadDataView(View):
                 print('cell_color:', cell_color)
                 print('is_locked:', is_locked)
                 print('data_type:', data_type)
+                print('is_currency:', is_currency)
                 print('\n====================\n')
+                
+                
+                #TODO: Create a DataCell object
+                
+                DataCell.objects.create(
+                    product_id=product_id,
+                    data_sheet_id=data_sheet_id,
+                    table_id=table_id,
+                    cell_title=cell.value,
+                    row_no=row,
+                    col_no=col,
+                    address=f"{table_id}.{row}.{col}",
+                    is_merged=is_merged_with,
+                    is_locked=is_locked,
+                    data_type=data_type,
+                    is_currency=is_currency,
+                ) #! Add other fields as required
 
 
                 
